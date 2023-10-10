@@ -4,10 +4,24 @@ import os
 import numpy as np
 import re
 import pandas as pd
+import copy
+from dataclasses import dataclass, asdict
 
-rating_dict = {
-    "date": None,
-    "task_mode": None,
+@dataclass(frozen=True, order=True)
+class Note:
+    date: None
+    task_mode: None
+    vd: 0
+    d: 0
+    n: 0
+    p: 0
+    vp: 0
+    work_time: 0
+    elapsed_time: 0
+    breaks: 0
+    productivity_pulse: 0
+
+default = {
     "vd": 0,
     "d": 0,
     "n": 0,
@@ -22,9 +36,9 @@ date = '2023-10-02'
 # These paths will obviously have to match whatever file you are trying to analyze
 # path = "../../Accountability/Dailies/Development_Mode/{}.md".format(date)
 path = "../../Accountability/Dailies/Learning_Mode/{}.md".format(date)
-# path = "../../Accountability/Dailies/Development_Mode/{}.md".format(date)
+# path = "../../Accountability/Dailies/Development_Mode/{}.md".format(date)     
 
-def task_splitter(f):
+def task_splitter(rating_dict, f):
     markdown_string = f.read()
     # print(markdown_string)
     tasks_isolated = markdown_string.split("### Tasks\n")[-1].split("####")[0]
@@ -50,6 +64,7 @@ def task_splitter(f):
             rating_dict["work_time"] += time_spent
             # print(rating_dict)
         rating_dict["elapsed_time"] += time_spent
+    return rating_dict
                 
 				
 def tasks_by_line(task_list):
@@ -76,9 +91,14 @@ def time_to_int(time_str):
     return h1 + m1
 	
 
-def calc_productivity_pulse(vd, d, n, p, vp, work_time, **kwargs):
-    pp = (((vd) + (d * 1) + (n * 2) + (p * 3) + (vp * 4)) / (work_time * 4)) * 100
-    rating_dict["productivity_pulse"] = pp
+def calc_productivity_pulse(rating_dict, vd, d, n, p, vp, work_time, **kwargs):
+    try:
+        pp = (((vd) + (d * 1) + (n * 2) + (p * 3) + (vp * 4)) / (work_time * 4)) * 100
+    except:
+        print("can't do that")
+    else:
+        rating_dict["productivity_pulse"] = pp
+    return rating_dict.copy()
     # print("PP::", round(pp, 2))
     # print("work_time::", rating_dict["work_time"])
     # print("elapsed_time::", rating_dict["elapsed_time"])
@@ -87,26 +107,21 @@ def calc_productivity_pulse(vd, d, n, p, vp, work_time, **kwargs):
 
     
 def task_features(date, task_mode, path):
+    rating_dict = copy.deepcopy(default)
     with open(path, 'r') as f:
-        task_splitter(f)
-    calc_productivity_pulse(**rating_dict)
-    set_date(date)
-    set_task_mode(task_mode)
-    return rating_dict
+        task_splitter(rating_dict, f)
+    calced = calc_productivity_pulse(rating_dict, **rating_dict)
+    result = asdict(Note(date, task_mode, **calced))
+    return result.copy()
 
 # this has been relegated to a single file reading tool used for debugging - but is functional
-if __name__ == "__main__":
-    print("starting calculation")
-    df = pd.DataFrame.from_dict([rating_dict])
-    print(df.head())
-    df.plot(kind='line')
-    
-    
-### Getters and Setters
-def set_date(date):
-    rating_dict["date"] = date
-    
-def set_task_mode(task_mode):
-    rating_dict["task_mode"] = task_mode
+# if __name__ == "__main__":
+#     print("starting calculation")
+#     df = pd.DataFrame.from_dict([rating_dict])
+#     print(df.head())
+#     df.plot(kind='line')
+
+# def reset_dict():
+#     rating_dict = default.copy()
         
     
