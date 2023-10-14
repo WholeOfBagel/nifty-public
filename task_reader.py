@@ -38,13 +38,16 @@ date = '2023-10-02'
 path = "../../Accountability/Dailies/Learning_Mode/{}.md".format(date)
 # path = "../../Accountability/Dailies/Development_Mode/{}.md".format(date)     
 
-def task_splitter(rating_dict, f):
+def task_splitter(f):
     markdown_string = f.read()
     # print(markdown_string)
     tasks_isolated = markdown_string.split("### Tasks\n")[-1].split("####")[0]
     times = []
     by_words = tasks_by_line(tasks_isolated)
     by_words = remove_sub_tasks(by_words)
+    return by_words
+
+def process_task_ratings(rating_dict, by_words):
     for index in range(0, len(by_words) - 1):
         line = by_words[index]
         next_line = by_words[index + 1]
@@ -59,7 +62,7 @@ def task_splitter(rating_dict, f):
         if second_word.lower() == "break":
             rating_dict["breaks"] = rating_dict["breaks"] + 1
         if second_word.lower() != "break":
-            rating = line[-1]
+            rating = line[-1].split('#')[-1]
             rating_dict[rating] += time_spent
             rating_dict["work_time"] += time_spent
             # print(rating_dict)
@@ -109,8 +112,9 @@ def calc_productivity_pulse(rating_dict, vd, d, n, p, vp, work_time, **kwargs):
 def task_features(date, task_mode, path):
     rating_dict = copy.deepcopy(default)
     with open(path, 'r') as f:
-        task_splitter(rating_dict, f)
-    calced = calc_productivity_pulse(rating_dict, **rating_dict)
+        by_words = task_splitter(f)
+        rating_dictionary = process_task_ratings(rating_dict, by_words)
+    calced = calc_productivity_pulse(rating_dictionary, **rating_dictionary)
     result = asdict(Note(date, task_mode, **calced))
     return result.copy()
 
